@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bingo Stream</title>
+<style>
+  :root{
+    --bg:#0f1117;
+    --panel:#171a23;
+    --cell:#1e2230;
+    --cell-border:#2c3142;
+    --text:#eef0f5;
+    --muted:#8a90a3;
+    --accent:#7c5cff;
+    --accent2:#ff5c8a;
+    --gold:#ffd166;
+    --checked:#2d3a2d;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Segoe UI', Roboto, Arial, sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    padding:24px;
+    transition:background .2s;
+  }
+  body.obs-mode{
+    background:transparent !important;
+    padding:12px;
+  }
+
+  #toolbar{
+    width:100%;
+    max-width:900px;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:22px;
+    padding:12px 16px;
+    background:var(--panel);
+    border-radius:var(--radius);
+    border:1px solid var(--cell-border);
+  }
+  body.obs-mode #toolbar{display:none;}
+
+  .btn{
+    background:var(--cell);
+    color:var(--text);
+    border:1px solid var(--cell-border);
+    padding:8px 14px;
+    border-radius:10px;
+    font-size:14px;
+    cursor:pointer;
+    transition:.15s;
+  }
+  .btn:hover{border-color:var(--accent);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);}
+  .btn.primary:hover{filter:brightness(1.1);}
+  .btn.danger{background:transparent;border-color:var(--accent2);color:var(--accent2);}
+  .btn.danger:hover{background:var(--accent2);color:#fff;}
+
+  select{
+    background:var(--cell);
+    color:var(--text);
+    border:1px solid var(--cell-border);
+    padding:8px 10px;
+    border-radius:10px;
+    font-size:14px;
+  }
+
+  label.sizelabel{font-size:13px;color:var(--muted);margin-right:4px;}
+
+  #board-wrap{
+    width:100%;
+    display:flex;
+    justify-content:center;
+  }
+
+  #board{
+    display:grid;
+    gap:8px;
+    width:min(88vmin, 900px);
+    aspect-ratio:1/1;
+  }
+
+  .cell{
+    position:relative;
+    background:var(--cell);
+    border:1px solid var(--cell-border);
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:6px;
+    overflow:hidden;
+    user-select:none;
+    transition:background .15s, transform .1s, border-color .15s;
+  }
+  .cell textarea{
+    width:100%;
+    height:100%;
+    background:transparent;
+    border:none;
+    outline:none;
+    resize:none;
+    color:var(--text);
+    text-align:center;
+    font-family:inherit;
+    font-size:clamp(11px, 1.6vmin, 15px);
+    line-height:1.25;
+    display:flex;
+    align-items:center;
+  }
+  .cell .label{
+    font-size:clamp(11px, 1.7vmin, 16px);
+    line-height:1.25;
+    word-break:break-word;
+    pointer-events:none;
+  }
+
+  .cell.playable{cursor:pointer;}
+  .cell.playable:hover{border-color:var(--accent);}
+  .cell.checked{
+    background:var(--checked);
+    border-color:#4caf6b;
+  }
+  .cell.checked::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:rgba(76,175,107,.12);
+  }
+
+  .cell.bingo{
+    background:linear-gradient(135deg, #3a2f13, #4a3a10);
+    border-color:var(--gold);
+    box-shadow:0 0 14px rgba(255,209,102,.45);
+  }
+  .cell.bingo .label{color:var(--gold);font-weight:600;}
+
+  #status{
+    margin-top:16px;
+    color:var(--muted);
+    font-size:13px;
+    text-align:center;
+  }
+  #status.win{
+    color:var(--gold);
+    font-size:16px;
+    font-weight:600;
+  }
+
+  .hint{
+    font-size:12px;
+    color:var(--muted);
+    max-width:900px;
+    text-align:center;
+    margin-top:10px;
+  }
+  body.obs-mode .hint{display:none;}
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <label class="sizelabel">Taille</label>
+  <select id="sizeSelect">
+    <option value="4">4x4</option>
+    <option value="5">5x5</option>
+    <option value="6">6x6</option>
+    <option value="7">7x7</option>
+  </select>
+  <button class="btn primary" id="finishBtn">Terminer le bingo</button>
+  <button class="btn" id="editBtn">Modifier</button>
+  <button class="btn" id="obsBtn">Mode OBS</button>
+  <button class="btn danger" id="resetBtn">Nouveau bingo</button>
+</div>
+
+<div id="board-wrap">
+  <div id="board"></div>
+</div>
+
+<div id="status"></div>
+<div class="hint">Astuce OBS : ajoute une source "Navigateur", colle l'URL de cette page, coche "Fond transparent (page transparente)", puis clique "Mode OBS" ici pour cacher les contrôles.</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'bingo-stream-state-v1';
+  const board = document.getElementById('board');
+  const status = document.getElementById('status');
+  const sizeSelect = document.getElementById('sizeSelect');
+  const finishBtn = document.getElementById('finishBtn');
+  const editBtn = document.getElementById('editBtn');
+  const obsBtn = document.getElementById('obsBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  function defaultState(size){
+    const n = size*size;
+    return {
+      size: size,
+      texts: new Array(n).fill(''),
+      checked: new Array(n).fill(false),
+      mode: 'setup'
+    };
+  }
+
+  let state = load() || defaultState(5);
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return null;
+      const s = JSON.parse(raw);
+      if(!s || !s.size || !Array.isArray(s.texts)) return null;
+      return s;
+    }catch(e){ return null; }
+  }
+
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function resizeState(newSize){
+    const n = newSize*newSize;
+    const oldTexts = state.texts, oldSize = state.size;
+    const texts = new Array(n).fill('');
+    for(let r=0;r<Math.min(newSize, oldSize);r++){
+      for(let c=0;c<Math.min(newSize, oldSize);c++){
+        texts[r*newSize+c] = oldTexts[r*oldSize+c] || '';
+      }
+    }
+    state = {
+      size: newSize,
+      texts: texts,
+      checked: new Array(n).fill(false),
+      mode: 'setup'
+    };
+    save();
+    render();
+  }
+
+  function completedLines(){
+    const n = state.size;
+    const win = new Set();
+    let any = false;
+    const get = (r,c)=> state.checked[r*n+c];
+
+    for(let r=0;r<n;r++){
+      let full = true;
+      for(let c=0;c<n;c++) if(!get(r,c)){ full=false; break; }
+      if(full){ any=true; for(let c=0;c<n;c++) win.add(r*n+c); }
+    }
+    for(let c=0;c<n;c++){
+      let full = true;
+      for(let r=0;r<n;r++) if(!get(r,c)){ full=false; break; }
+      if(full){ any=true; for(let r=0;r<n;r++) win.add(r*n+c); }
+    }
+    let diag1 = true;
+    for(let i=0;i<n;i++) if(!get(i,i)){ diag1=false; break; }
+    if(diag1){ any=true; for(let i=0;i<n;i++) win.add(i*n+i); }
+
+    let diag2 = true;
+    for(let i=0;i<n;i++) if(!get(i, n-1-i)){ diag2=false; break; }
+    if(diag2){ any=true; for(let i=0;i<n;i++) win.add(i*n+(n-1-i)); }
+
+    return {win, any};
+  }
+
+  function render(){
+    const n = state.size;
+    sizeSelect.value = String(n);
+    board.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+    board.style.gridTemplateRows = `repeat(${n}, 1fr)`;
+    board.innerHTML = '';
+
+    const isPlay = state.mode === 'play';
+    finishBtn.style.display = isPlay ? 'none' : 'inline-block';
+    editBtn.style.display = isPlay ? 'inline-block' : 'none';
+    sizeSelect.disabled = isPlay;
+
+    let winInfo = {win:new Set(), any:false};
+    if(isPlay) winInfo = completedLines();
+
+    for(let i=0;i<n*n;i++){
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+
+      if(!isPlay){
+        const ta = document.createElement('textarea');
+        ta.value = state.texts[i];
+        ta.placeholder = '...';
+        ta.maxLength = 60;
+        ta.addEventListener('input', ()=>{
+          state.texts[i] = ta.value;
+          save();
+        });
+        cell.appendChild(ta);
+      }else{
+        cell.classList.add('playable');
+        if(state.checked[i]) cell.classList.add('checked');
+        if(winInfo.win.has(i)) cell.classList.add('bingo');
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = state.texts[i];
+        cell.appendChild(label);
+        cell.addEventListener('click', ()=>{
+          state.checked[i] = !state.checked[i];
+          save();
+          render();
+        });
+      }
+      board.appendChild(cell);
+    }
+
+    if(isPlay){
+      if(winInfo.any){
+        status.textContent = '🎉 BINGO !';
+        status.className = 'win';
+      }else{
+        status.textContent = 'Clique sur les cases au fur et à mesure.';
+        status.className = '';
+      }
+    }else{
+      status.textContent = 'Remplis les cases puis clique "Terminer le bingo".';
+      status.className = '';
+    }
+  }
+
+  sizeSelect.addEventListener('change', ()=>{
+    const n = parseInt(sizeSelect.value, 10);
+    resizeState(n);
+  });
+
+  finishBtn.addEventListener('click', ()=>{
+    state.mode = 'play';
+    state.checked = new Array(state.size*state.size).fill(false);
+    save();
+    render();
+  });
+
+  editBtn.addEventListener('click', ()=>{
+    state.mode = 'setup';
+    save();
+    render();
+  });
+
+  obsBtn.addEventListener('click', ()=>{
+    document.body.classList.toggle('obs-mode');
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    if(!confirm('Repartir sur une grille vide ?')) return;
+    resizeState(state.size);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
