@@ -19,28 +19,115 @@
     --radius:14px;
   }
   *{box-sizing:border-box;}
-  html{height:100%;}
+  html,body{height:100%;}
   body{
     margin:0;
-    min-height:100%;
-    min-height:100dvh;
     background:var(--bg);
     color:var(--text);
     font-family:'Segoe UI', Roboto, Arial, sans-serif;
+    height:100dvh;
+    overflow:hidden;
+    display:flex;
+  }
+
+  /* ---- sidebar (hidden entirely in embed mode) ---- */
+  #sidebar{
+    flex:0 0 260px;
+    height:100%;
+    overflow-y:auto;
+    background:var(--panel);
+    border-right:1px solid var(--cell-border);
+    padding:18px 16px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  #sidebar h1{
+    font-size:16px;
+    margin:0;
+  }
+  #guide{
+    background:var(--cell);
+    border:1px solid var(--cell-border);
+    border-radius:10px;
+    padding:8px 12px;
+    font-size:12.5px;
+    color:var(--muted);
+  }
+  #guide summary{
+    cursor:pointer;
+    color:var(--text);
+    font-weight:600;
+    font-size:13px;
+  }
+  #guide ol{margin:8px 0 0;padding-left:18px;}
+  #guide li{margin-bottom:4px;}
+  #guide b{color:var(--text);}
+
+  #boardList{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    overflow-y:auto;
+  }
+  .board-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--cell);
+    border:1px solid var(--cell-border);
+    border-radius:10px;
+    padding:8px 10px;
+    cursor:pointer;
+    transition:.15s;
+  }
+  .board-item:hover{border-color:var(--accent);}
+  .board-item.active{border-color:var(--accent);background:#232842;}
+  .board-item .name{
+    flex:1;
+    font-size:13px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .board-item .size-badge{
+    font-size:10px;
+    color:var(--muted);
+    border:1px solid var(--cell-border);
+    border-radius:6px;
+    padding:1px 5px;
+  }
+  .board-item .del{
+    background:none;
+    border:none;
+    color:var(--muted);
+    cursor:pointer;
+    font-size:14px;
+    line-height:1;
+    padding:2px 4px;
+  }
+  .board-item .del:hover{color:var(--accent2);}
+
+  /* ---- main ---- */
+  #main{
+    flex:1 1 auto;
+    height:100%;
+    min-width:0;
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:flex-start;
-    padding:24px;
-    overflow-x:hidden;
-    transition:background .2s;
+    padding:20px;
+    gap:14px;
+    overflow:hidden;
   }
-  body.obs-mode{
+  body.embed-mode{
     background:transparent !important;
-    padding:12px;
   }
+  body.embed-mode #sidebar{display:none;}
+  body.embed-mode #main{padding:10px;}
 
   #toolbar{
+    flex:0 0 auto;
     width:100%;
     max-width:900px;
     display:flex;
@@ -48,13 +135,12 @@
     align-items:center;
     justify-content:center;
     gap:10px;
-    margin-bottom:22px;
     padding:12px 16px;
     background:var(--panel);
     border-radius:var(--radius);
     border:1px solid var(--cell-border);
   }
-  body.obs-mode #toolbar{display:none;}
+  body.embed-mode #toolbar{display:none;}
 
   .btn{
     background:var(--cell);
@@ -73,6 +159,7 @@
   .btn.primary:hover{filter:brightness(1.1);}
   .btn.danger{background:transparent;border-color:var(--accent2);color:var(--accent2);}
   .btn.danger:hover{background:var(--accent2);color:#fff;}
+  .btn.full{width:100%;}
 
   select{
     background:var(--cell);
@@ -86,8 +173,11 @@
   label.sizelabel{font-size:13px;color:var(--muted);margin-right:4px;}
 
   #board-wrap{
+    flex:1 1 auto;
+    min-height:0;
     width:100%;
     display:flex;
+    align-items:center;
     justify-content:center;
   }
 
@@ -95,7 +185,7 @@
     display:grid;
     gap:8px;
     width:min(88vmin, 900px);
-    aspect-ratio:1/1;
+    height:min(88vmin, 900px);
   }
 
   .cell{
@@ -112,20 +202,25 @@
     user-select:none;
     transition:background .15s, transform .1s, border-color .15s;
   }
-  .cell textarea{
+  .cell .edit{
     width:100%;
     height:100%;
-    background:transparent;
-    border:none;
-    outline:none;
-    resize:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     color:var(--text);
     text-align:center;
     font-family:inherit;
     font-size:clamp(11px, 1.6vmin, 15px);
     line-height:1.25;
-    display:flex;
-    align-items:center;
+    word-break:break-word;
+    outline:none;
+    cursor:text;
+    overflow:hidden;
+  }
+  .cell .edit:empty::before{
+    content:attr(data-placeholder);
+    color:var(--muted);
   }
   .cell .label{
     font-size:clamp(11px, 1.7vmin, 16px);
@@ -155,7 +250,7 @@
   .cell.bingo .label{color:var(--gold);font-weight:600;}
 
   #status{
-    margin-top:16px;
+    flex:0 0 auto;
     color:var(--muted);
     font-size:13px;
     text-align:center;
@@ -165,70 +260,102 @@
     font-size:16px;
     font-weight:600;
   }
-
-  .hint{
-    font-size:12px;
+  #empty-msg{
     color:var(--muted);
-    max-width:900px;
+    font-size:14px;
     text-align:center;
-    margin-top:10px;
   }
-  body.obs-mode .hint{display:none;}
 
-  @media (max-width:600px){
-    body{padding:12px;}
-    #toolbar{
-      gap:8px;
-      padding:10px 12px;
-      margin-bottom:14px;
+  @media (max-width:760px){
+    body{flex-direction:column;overflow-y:auto;overflow-x:hidden;height:auto;min-height:100dvh;}
+    #sidebar{
+      flex:0 0 auto;
+      width:100%;
+      height:auto;
+      max-height:none;
+      border-right:none;
+      border-bottom:1px solid var(--cell-border);
     }
-    .btn, select{
-      font-size:13px;
-      padding:7px 10px;
-    }
+    #guide[open]{max-height:220px;overflow-y:auto;}
+    #boardList{flex-direction:row;flex-wrap:wrap;}
+    .board-item{flex:1 1 140px;}
+    #main{height:auto;min-height:80dvh;padding:14px;}
+    #toolbar{gap:8px;padding:10px 12px;}
+    .btn, select{font-size:13px;padding:7px 10px;}
     label.sizelabel{width:100%;text-align:center;margin:0 0 -2px;}
-    #board{width:94vmin;gap:6px;}
-    .hint{font-size:11px;padding:0 6px;}
+    #board{gap:6px;}
   }
 </style>
 </head>
 <body>
 
-<div id="toolbar">
-  <label class="sizelabel">Taille</label>
-  <select id="sizeSelect">
-    <option value="4">4x4</option>
-    <option value="5">5x5</option>
-    <option value="6">6x6</option>
-    <option value="7">7x7</option>
-  </select>
-  <button class="btn primary" id="finishBtn">Terminer le bingo</button>
-  <button class="btn" id="editBtn">Modifier</button>
-  <button class="btn" id="obsBtn">Mode OBS</button>
-  <button class="btn danger" id="resetBtn">Nouveau bingo</button>
-</div>
+<aside id="sidebar">
+  <h1>🎲 Bingo Stream</h1>
+  <details id="guide" open>
+    <summary>Comment ça marche ?</summary>
+    <ol>
+      <li>Choisis une taille (4x4 à 7x7).</li>
+      <li>Clique une case et écris ton texte.</li>
+      <li>Clique <b>Terminer le bingo</b> pour verrouiller.</li>
+      <li>Coche les cases en live : une ligne, colonne ou diagonale complète se surligne en or.</li>
+      <li>Copie le lien <b>Embed</b> d'une grille et colle-le dans une source "Navigateur" OBS (coche "Fond transparent"). Ça s'actualise en direct.</li>
+    </ol>
+    <p>Tu peux créer plusieurs grilles ci-dessous et garder chacune dans une source OBS différente.</p>
+  </details>
+  <div id="boardList"></div>
+  <button class="btn primary full" id="newBoardBtn">+ Nouvelle grille</button>
+</aside>
 
-<div id="board-wrap">
-  <div id="board"></div>
-</div>
+<main id="main">
+  <div id="toolbar">
+    <label class="sizelabel">Taille</label>
+    <select id="sizeSelect">
+      <option value="4">4x4</option>
+      <option value="5">5x5</option>
+      <option value="6">6x6</option>
+      <option value="7">7x7</option>
+    </select>
+    <button class="btn primary" id="finishBtn">Terminer le bingo</button>
+    <button class="btn" id="editBtn">Modifier</button>
+    <button class="btn" id="renameBtn">Renommer</button>
+    <button class="btn" id="embedBtn">Copier le lien Embed</button>
+    <button class="btn danger" id="resetBtn">Vider la grille</button>
+  </div>
 
-<div id="status"></div>
-<div class="hint">Astuce OBS : ajoute une source "Navigateur", colle l'URL de cette page, coche "Fond transparent (page transparente)", puis clique "Mode OBS" ici pour cacher les contrôles.</div>
+  <div id="board-wrap"><div id="board"></div></div>
+  <div id="status"></div>
+</main>
 
 <script>
 (function(){
-  const STORAGE_KEY = 'bingo-stream-state-v1';
+  const STORAGE_KEY = 'bingo-stream-state-v2';
+  const OLD_KEY = 'bingo-stream-state-v1';
+
+  const params = new URLSearchParams(location.search);
+  const embedId = params.get('embed');
+  const isEmbed = !!embedId;
+  if(isEmbed) document.body.classList.add('embed-mode');
+
+  const sidebar = document.getElementById('sidebar');
+  const boardListEl = document.getElementById('boardList');
+  const newBoardBtn = document.getElementById('newBoardBtn');
   const board = document.getElementById('board');
+  const boardWrap = document.getElementById('board-wrap');
   const status = document.getElementById('status');
   const sizeSelect = document.getElementById('sizeSelect');
   const finishBtn = document.getElementById('finishBtn');
   const editBtn = document.getElementById('editBtn');
-  const obsBtn = document.getElementById('obsBtn');
+  const renameBtn = document.getElementById('renameBtn');
+  const embedBtn = document.getElementById('embedBtn');
   const resetBtn = document.getElementById('resetBtn');
 
-  function defaultState(size){
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function newBoard(name, size){
     const n = size*size;
     return {
+      id: uid(),
+      name: name || 'Grille',
       size: size,
       texts: new Array(n).fill(''),
       checked: new Array(n).fill(false),
@@ -236,46 +363,55 @@
     };
   }
 
-  let state = load() || defaultState(5);
+  function migrateOld(){
+    try{
+      const raw = localStorage.getItem(OLD_KEY);
+      if(!raw) return null;
+      const old = JSON.parse(raw);
+      if(!old || !old.size || !Array.isArray(old.texts)) return null;
+      const b = newBoard('Grille 1', old.size);
+      b.texts = old.texts;
+      b.checked = old.checked || new Array(old.size*old.size).fill(false);
+      b.mode = old.mode || 'setup';
+      return { activeId: b.id, boards: [b] };
+    }catch(e){ return null; }
+  }
 
   function load(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return null;
-      const s = JSON.parse(raw);
-      if(!s || !s.size || !Array.isArray(s.texts)) return null;
-      return s;
-    }catch(e){ return null; }
-  }
-
-  function save(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }
-
-  function resizeState(newSize){
-    const n = newSize*newSize;
-    const oldTexts = state.texts, oldSize = state.size;
-    const texts = new Array(n).fill('');
-    for(let r=0;r<Math.min(newSize, oldSize);r++){
-      for(let c=0;c<Math.min(newSize, oldSize);c++){
-        texts[r*newSize+c] = oldTexts[r*oldSize+c] || '';
+      if(raw){
+        const s = JSON.parse(raw);
+        if(s && Array.isArray(s.boards) && s.boards.length) return s;
       }
-    }
-    state = {
-      size: newSize,
-      texts: texts,
-      checked: new Array(n).fill(false),
-      mode: 'setup'
-    };
-    save();
-    render();
+    }catch(e){}
+    const migrated = migrateOld();
+    if(migrated) return migrated;
+    const b = newBoard('Grille 1', 5);
+    return { activeId: b.id, boards: [b] };
   }
 
-  function completedLines(){
-    const n = state.size;
+  let state = load();
+  let lastSerialized = JSON.stringify(state);
+
+  function persist(){
+    lastSerialized = JSON.stringify(state);
+    localStorage.setItem(STORAGE_KEY, lastSerialized);
+  }
+
+  function getBoard(id){
+    return state.boards.find(b => b.id === id) || null;
+  }
+
+  function currentBoard(){
+    return getBoard(isEmbed ? embedId : state.activeId);
+  }
+
+  function completedLines(b){
+    const n = b.size;
     const win = new Set();
     let any = false;
-    const get = (r,c)=> state.checked[r*n+c];
+    const get = (r,c)=> b.checked[r*n+c];
 
     for(let r=0;r<n;r++){
       let full = true;
@@ -298,47 +434,131 @@
     return {win, any};
   }
 
-  function render(){
-    const n = state.size;
+  function sizeBoard(){
+    const w = boardWrap.clientWidth;
+    const h = boardWrap.clientHeight;
+    const size = Math.max(160, Math.min(w, h, 900));
+    board.style.width = size + 'px';
+    board.style.height = size + 'px';
+  }
+  window.addEventListener('resize', sizeBoard);
+
+  function renderSidebar(){
+    if(isEmbed) return;
+    boardListEl.innerHTML = '';
+    state.boards.forEach(b=>{
+      const item = document.createElement('div');
+      item.className = 'board-item' + (b.id === state.activeId ? ' active' : '');
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = b.name;
+      const badge = document.createElement('div');
+      badge.className = 'size-badge';
+      badge.textContent = b.size + 'x' + b.size;
+      const del = document.createElement('button');
+      del.className = 'del';
+      del.textContent = '✕';
+      del.title = 'Supprimer';
+      del.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        if(state.boards.length <= 1) return;
+        if(!confirm('Supprimer "' + b.name + '" ?')) return;
+        state.boards = state.boards.filter(x => x.id !== b.id);
+        if(state.activeId === b.id) state.activeId = state.boards[0].id;
+        persist();
+        renderAll();
+      });
+      item.appendChild(name);
+      item.appendChild(badge);
+      item.appendChild(del);
+      item.addEventListener('click', ()=>{
+        state.activeId = b.id;
+        persist();
+        renderAll();
+      });
+      boardListEl.appendChild(item);
+    });
+  }
+
+  function renderBoard(){
+    const b = currentBoard();
+
+    if(!b){
+      board.innerHTML = '';
+      status.textContent = '';
+      const msg = document.createElement('div');
+      msg.id = 'empty-msg';
+      msg.textContent = 'Grille introuvable.';
+      boardWrap.innerHTML = '';
+      boardWrap.appendChild(msg);
+      return;
+    }
+
+    if(!boardWrap.contains(board)){
+      boardWrap.innerHTML = '';
+      boardWrap.appendChild(board);
+    }
+
+    const n = b.size;
     sizeSelect.value = String(n);
     board.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
     board.style.gridTemplateRows = `repeat(${n}, 1fr)`;
     board.innerHTML = '';
 
-    const isPlay = state.mode === 'play';
+    const isPlay = b.mode === 'play';
     finishBtn.style.display = isPlay ? 'none' : 'inline-block';
     editBtn.style.display = isPlay ? 'inline-block' : 'none';
     sizeSelect.disabled = isPlay;
 
+    if(isEmbed && !isPlay){
+      status.textContent = '';
+      board.remove();
+      const msg = document.createElement('div');
+      msg.id = 'empty-msg';
+      msg.textContent = 'En attente de la configuration de la grille...';
+      boardWrap.innerHTML = '';
+      boardWrap.appendChild(msg);
+      return;
+    }
+
     let winInfo = {win:new Set(), any:false};
-    if(isPlay) winInfo = completedLines();
+    if(isPlay) winInfo = completedLines(b);
 
     for(let i=0;i<n*n;i++){
       const cell = document.createElement('div');
       cell.className = 'cell';
 
       if(!isPlay){
-        const ta = document.createElement('textarea');
-        ta.value = state.texts[i];
-        ta.placeholder = '...';
-        ta.maxLength = 60;
-        ta.addEventListener('input', ()=>{
-          state.texts[i] = ta.value;
-          save();
+        const ed = document.createElement('div');
+        ed.className = 'edit';
+        ed.contentEditable = 'true';
+        ed.setAttribute('data-placeholder', '...');
+        ed.textContent = b.texts[i];
+        ed.addEventListener('input', ()=>{
+          b.texts[i] = ed.textContent;
+          persist();
         });
-        cell.appendChild(ta);
+        ed.addEventListener('keydown', (e)=>{
+          if(e.key === 'Enter'){ e.preventDefault(); ed.blur(); }
+        });
+        ed.addEventListener('paste', (e)=>{
+          e.preventDefault();
+          const txt = (e.clipboardData || window.clipboardData).getData('text');
+          document.execCommand('insertText', false, txt);
+        });
+        cell.appendChild(ed);
       }else{
         cell.classList.add('playable');
-        if(state.checked[i]) cell.classList.add('checked');
+        if(b.checked[i]) cell.classList.add('checked');
         if(winInfo.win.has(i)) cell.classList.add('bingo');
         const label = document.createElement('div');
         label.className = 'label';
-        label.textContent = state.texts[i];
+        label.textContent = b.texts[i];
         cell.appendChild(label);
         cell.addEventListener('click', ()=>{
-          state.checked[i] = !state.checked[i];
-          save();
-          render();
+          b.checked[i] = !b.checked[i];
+          persist();
+          renderBoard();
         });
       }
       board.appendChild(cell);
@@ -356,36 +576,128 @@
       status.textContent = 'Remplis les cases puis clique "Terminer le bingo".';
       status.className = '';
     }
+
+    requestAnimationFrame(sizeBoard);
   }
 
-  sizeSelect.addEventListener('change', ()=>{
-    const n = parseInt(sizeSelect.value, 10);
-    resizeState(n);
+  function renderAll(){
+    renderSidebar();
+    renderBoard();
+  }
+
+  if(!isEmbed){
+    sizeSelect.addEventListener('change', ()=>{
+      const newSize = parseInt(sizeSelect.value, 10);
+      const b = currentBoard();
+      if(!b) return;
+      const n = newSize*newSize;
+      const oldTexts = b.texts, oldSize = b.size;
+      const texts = new Array(n).fill('');
+      for(let r=0;r<Math.min(newSize, oldSize);r++){
+        for(let c=0;c<Math.min(newSize, oldSize);c++){
+          texts[r*newSize+c] = oldTexts[r*oldSize+c] || '';
+        }
+      }
+      b.size = newSize;
+      b.texts = texts;
+      b.checked = new Array(n).fill(false);
+      persist();
+      renderAll();
+    });
+
+    finishBtn.addEventListener('click', ()=>{
+      const b = currentBoard();
+      if(!b) return;
+      b.mode = 'play';
+      b.checked = new Array(b.size*b.size).fill(false);
+      persist();
+      renderAll();
+    });
+
+    editBtn.addEventListener('click', ()=>{
+      const b = currentBoard();
+      if(!b) return;
+      b.mode = 'setup';
+      persist();
+      renderAll();
+    });
+
+    renameBtn.addEventListener('click', ()=>{
+      const b = currentBoard();
+      if(!b) return;
+      const name = prompt('Nom de la grille :', b.name);
+      if(name === null || !name.trim()) return;
+      b.name = name.trim();
+      persist();
+      renderAll();
+    });
+
+    embedBtn.addEventListener('click', async ()=>{
+      const b = currentBoard();
+      if(!b) return;
+      const url = location.origin + location.pathname + '?embed=' + b.id;
+      try{
+        await navigator.clipboard.writeText(url);
+        embedBtn.textContent = 'Lien copié !';
+      }catch(e){
+        prompt('Copie ce lien dans OBS :', url);
+      }
+      setTimeout(()=>{ embedBtn.textContent = 'Copier le lien Embed'; }, 1800);
+    });
+
+    resetBtn.addEventListener('click', ()=>{
+      const b = currentBoard();
+      if(!b) return;
+      if(!confirm('Vider "' + b.name + '" ?')) return;
+      const n = b.size*b.size;
+      b.texts = new Array(n).fill('');
+      b.checked = new Array(n).fill(false);
+      b.mode = 'setup';
+      persist();
+      renderAll();
+    });
+
+    newBoardBtn.addEventListener('click', ()=>{
+      const b = newBoard('Grille ' + (state.boards.length + 1), 5);
+      state.boards.push(b);
+      state.activeId = b.id;
+      persist();
+      renderAll();
+    });
+  }
+
+  window.addEventListener('storage', (e)=>{
+    if(e.key !== STORAGE_KEY) return;
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw === lastSerialized) return;
+    try{
+      const s = JSON.parse(raw);
+      if(s && Array.isArray(s.boards)){
+        state = s;
+        lastSerialized = raw;
+        renderAll();
+      }
+    }catch(err){}
   });
 
-  finishBtn.addEventListener('click', ()=>{
-    state.mode = 'play';
-    state.checked = new Array(state.size*state.size).fill(false);
-    save();
-    render();
-  });
+  if(isEmbed){
+    setInterval(()=>{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw && raw !== lastSerialized){
+        try{
+          const s = JSON.parse(raw);
+          if(s && Array.isArray(s.boards)){
+            state = s;
+            lastSerialized = raw;
+            renderAll();
+          }
+        }catch(err){}
+      }
+    }, 1000);
+  }
 
-  editBtn.addEventListener('click', ()=>{
-    state.mode = 'setup';
-    save();
-    render();
-  });
-
-  obsBtn.addEventListener('click', ()=>{
-    document.body.classList.toggle('obs-mode');
-  });
-
-  resetBtn.addEventListener('click', ()=>{
-    if(!confirm('Repartir sur une grille vide ?')) return;
-    resizeState(state.size);
-  });
-
-  render();
+  persist();
+  renderAll();
 })();
 </script>
 </body>
