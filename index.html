@@ -202,7 +202,7 @@
     user-select:none;
     transition:background .15s, transform .1s, border-color .15s;
   }
-  .cell .edit{
+  .cell .edit, .cell .label{
     width:100%;
     height:100%;
     display:flex;
@@ -211,21 +211,20 @@
     color:var(--text);
     text-align:center;
     font-family:inherit;
-    font-size:clamp(11px, 1.6vmin, 15px);
-    line-height:1.25;
+    font-size:24px;
+    line-height:1.2;
     word-break:break-word;
+    overflow:hidden;
+  }
+  .cell .edit{
     outline:none;
     cursor:text;
-    overflow:hidden;
   }
   .cell .edit:empty::before{
     content:attr(data-placeholder);
     color:var(--muted);
   }
   .cell .label{
-    font-size:clamp(11px, 1.7vmin, 16px);
-    line-height:1.25;
-    word-break:break-word;
     pointer-events:none;
   }
 
@@ -461,7 +460,28 @@
     board.style.width = size + 'px';
     board.style.height = size + 'px';
   }
-  window.addEventListener('resize', sizeBoard);
+  window.addEventListener('resize', ()=>{ sizeBoard(); fitAllCells(); });
+
+  function fitText(cell, el){
+    const availW = cell.clientWidth - 12;
+    const availH = cell.clientHeight - 12;
+    if(availW <= 0 || availH <= 0) return;
+    let size = Math.max(24, Math.min(availH * 0.32, 34));
+    el.style.fontSize = size + 'px';
+    let guard = 0;
+    while(size > 10 && guard < 40 && (el.scrollHeight > availH || el.scrollWidth > availW)){
+      size -= 1;
+      el.style.fontSize = size + 'px';
+      guard++;
+    }
+  }
+
+  function fitAllCells(){
+    board.querySelectorAll('.cell').forEach(cell=>{
+      const el = cell.querySelector('.edit, .label');
+      if(el) fitText(cell, el);
+    });
+  }
 
   function renderSidebar(){
     if(isEmbed) return;
@@ -557,6 +577,7 @@
         ed.addEventListener('input', ()=>{
           b.texts[i] = ed.textContent;
           persist();
+          fitText(cell, ed);
         });
         ed.addEventListener('keydown', (e)=>{
           if(e.key === 'Enter'){ e.preventDefault(); ed.blur(); }
@@ -604,7 +625,7 @@
       status.className = '';
     }
 
-    requestAnimationFrame(sizeBoard);
+    requestAnimationFrame(()=>{ sizeBoard(); fitAllCells(); });
   }
 
   function renderAll(){
