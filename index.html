@@ -160,6 +160,27 @@
   .btn.danger{background:transparent;border-color:var(--accent2);color:var(--accent2);}
   .btn.danger:hover{background:var(--accent2);color:#fff;}
   .btn.full{width:100%;}
+  .btn.active{background:var(--gold);border-color:var(--gold);color:#3a2f13;font-weight:600;}
+
+  .colorpicker{display:flex;align-items:center;gap:6px;}
+  .swatch{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    border:2px solid transparent;
+    cursor:pointer;
+    padding:0;
+  }
+  .swatch.active{border-color:#fff;box-shadow:0 0 0 2px var(--panel), 0 0 0 3px #fff;}
+  #customColor{
+    width:26px;
+    height:26px;
+    padding:0;
+    border:1px solid var(--cell-border);
+    border-radius:6px;
+    background:none;
+    cursor:pointer;
+  }
 
   select{
     background:var(--cell);
@@ -228,9 +249,20 @@
     pointer-events:none;
   }
 
-  .cell:not(.playable):hover{
+  .cell:not(.playable):not(.joker-cell):hover{
     border-color:#3d4460;
     background:#242838;
+  }
+
+  .cell.joker-cell{
+    cursor:default;
+    background:linear-gradient(135deg, #3a2f13, #2a2410);
+    border-color:var(--gold);
+  }
+  .cell.joker-cell .edit, .cell.joker-cell .label{
+    color:var(--gold);
+    font-weight:700;
+    pointer-events:none;
   }
   .cell:focus-within{
     border-color:var(--accent);
@@ -336,6 +368,16 @@
     </select>
     <button class="btn primary" id="finishBtn">Terminer le bingo</button>
     <button class="btn" id="editBtn">Modifier</button>
+    <button class="btn" id="jokerBtn" title="Case centrale offerte">★ Joker</button>
+    <div class="colorpicker" id="colorPicker">
+      <button class="swatch" data-color="#7c5cff" style="background:#7c5cff" title="Violet"></button>
+      <button class="swatch" data-color="#ff5c8a" style="background:#ff5c8a" title="Rose"></button>
+      <button class="swatch" data-color="#22c55e" style="background:#22c55e" title="Vert"></button>
+      <button class="swatch" data-color="#38bdf8" style="background:#38bdf8" title="Bleu"></button>
+      <button class="swatch" data-color="#f97316" style="background:#f97316" title="Orange"></button>
+      <button class="swatch" data-color="#eab308" style="background:#eab308" title="Jaune"></button>
+      <input type="color" id="customColor" title="Couleur personnalisée">
+    </div>
     <button class="btn" id="renameBtn">Renommer</button>
     <button class="btn" id="embedBtn">Copier le lien Embed</button>
     <button class="btn danger" id="resetBtn">Vider la grille</button>
@@ -364,11 +406,18 @@
   const sizeSelect = document.getElementById('sizeSelect');
   const finishBtn = document.getElementById('finishBtn');
   const editBtn = document.getElementById('editBtn');
+  const jokerBtn = document.getElementById('jokerBtn');
+  const colorPicker = document.getElementById('colorPicker');
+  const customColor = document.getElementById('customColor');
   const renameBtn = document.getElementById('renameBtn');
   const embedBtn = document.getElementById('embedBtn');
   const resetBtn = document.getElementById('resetBtn');
 
+  const DEFAULT_COLOR = '#7c5cff';
+
   function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function jokerIndex(n){ return Math.floor((n*n)/2); }
 
   function newBoard(name, size){
     const n = size*size;
@@ -378,8 +427,14 @@
       size: size,
       texts: new Array(n).fill(''),
       checked: new Array(n).fill(false),
-      mode: 'setup'
+      mode: 'setup',
+      joker: false,
+      color: DEFAULT_COLOR
     };
+  }
+
+  function applyTheme(b){
+    document.documentElement.style.setProperty('--accent', b.color || DEFAULT_COLOR);
   }
 
   function migrateOld(){
@@ -539,7 +594,12 @@
       boardWrap.appendChild(board);
     }
 
+    applyTheme(b);
+
     const n = b.size;
+    const jokerIdx = jokerIndex(n);
+    if(b.joker) b.checked[jokerIdx] = true;
+
     sizeSelect.value = String(n);
     board.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
     board.style.gridTemplateRows = `repeat(${n}, 1fr)`;
@@ -549,6 +609,17 @@
     finishBtn.style.display = isPlay ? 'none' : 'inline-block';
     editBtn.style.display = isPlay ? 'inline-block' : 'none';
     sizeSelect.disabled = isPlay;
+    if(jokerBtn){
+      jokerBtn.classList.toggle('active', !!b.joker);
+      jokerBtn.style.display = isEmbed ? 'none' : 'inline-block';
+    }
+    if(colorPicker){
+      colorPicker.style.display = isEmbed ? 'none' : 'flex';
+      colorPicker.querySelectorAll('.swatch').forEach(sw=>{
+        sw.classList.toggle('active', (b.color || DEFAULT_COLOR).toLowerCase() === sw.dataset.color.toLowerCase());
+      });
+      if(customColor) customColor.value = b.color || DEFAULT_COLOR;
+    }
 
     if(isEmbed && !isPlay){
       status.textContent = '';
@@ -564,30 +635,58 @@
     let winInfo = {win:new Set(), any:false};
     if(isPlay) winInfo = completedLines(b);
 
+    function focusStep(fromIndex, key){
+      let ni = fromIndex;
+      for(let tries=0; tries<n; tries++){
+        if(key === 'ArrowRight' && (ni % n) < n-1) ni += 1;
+        else if(key === 'ArrowLeft' && (ni % n) > 0) ni -= 1;
+        else if(key === 'ArrowDown' && ni + n < n*n) ni += n;
+        else if(key === 'ArrowUp' && ni - n >= 0) ni -= n;
+        else break;
+        if(ni !== jokerIdx) return ni;
+      }
+      return fromIndex;
+    }
+
     for(let i=0;i<n*n;i++){
       const cell = document.createElement('div');
       cell.className = 'cell';
+      const isJoker = b.joker && i === jokerIdx;
+      if(isJoker) cell.classList.add('joker-cell');
 
       if(!isPlay){
-        const ed = document.createElement('div');
-        ed.className = 'edit';
-        ed.contentEditable = 'true';
-        ed.setAttribute('data-placeholder', '...');
-        ed.textContent = b.texts[i];
-        ed.addEventListener('input', ()=>{
-          b.texts[i] = ed.textContent;
-          persist();
-          fitText(cell, ed);
-        });
-        ed.addEventListener('keydown', (e)=>{
-          if(e.key === 'Enter'){ e.preventDefault(); ed.blur(); }
-        });
-        ed.addEventListener('paste', (e)=>{
-          e.preventDefault();
-          const txt = (e.clipboardData || window.clipboardData).getData('text');
-          document.execCommand('insertText', false, txt);
-        });
-        cell.appendChild(ed);
+        if(isJoker){
+          const label = document.createElement('div');
+          label.className = 'label';
+          label.textContent = '★ JOKER';
+          cell.appendChild(label);
+        }else{
+          const ed = document.createElement('div');
+          ed.className = 'edit';
+          ed.contentEditable = 'true';
+          ed.setAttribute('data-placeholder', '...');
+          ed.textContent = b.texts[i];
+          ed.addEventListener('input', ()=>{
+            b.texts[i] = ed.textContent;
+            persist();
+            fitText(cell, ed);
+          });
+          ed.addEventListener('keydown', (e)=>{
+            if(e.key === 'Enter'){ e.preventDefault(); ed.blur(); }
+          });
+          ed.addEventListener('paste', (e)=>{
+            e.preventDefault();
+            const txt = (e.clipboardData || window.clipboardData).getData('text');
+            document.execCommand('insertText', false, txt);
+          });
+          cell.appendChild(ed);
+        }
+      }else if(isJoker){
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = '★ JOKER';
+        cell.appendChild(label);
+        if(winInfo.win.has(i)) cell.classList.add('bingo');
       }else{
         cell.classList.add('playable');
         cell.tabIndex = 0;
@@ -603,10 +702,18 @@
           b.checked[i] = !b.checked[i];
           persist();
           renderBoard();
+          const el = board.children[i];
+          if(el && el.tabIndex === 0) el.focus({preventScroll:true});
         };
         cell.addEventListener('click', toggle);
         cell.addEventListener('keydown', (e)=>{
-          if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); }
+          if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); return; }
+          if(e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'ArrowDown'){
+            e.preventDefault();
+            const ni = focusStep(i, e.key);
+            const target = board.children[ni];
+            if(target && target.tabIndex === 0) target.focus();
+          }
         });
       }
       board.appendChild(cell);
@@ -666,6 +773,33 @@
       const b = currentBoard();
       if(!b) return;
       b.mode = 'setup';
+      persist();
+      renderAll();
+    });
+
+    jokerBtn.addEventListener('click', ()=>{
+      const b = currentBoard();
+      if(!b) return;
+      b.joker = !b.joker;
+      if(b.joker) b.checked[jokerIndex(b.size)] = true;
+      persist();
+      renderAll();
+    });
+
+    colorPicker.querySelectorAll('.swatch').forEach(sw=>{
+      sw.addEventListener('click', ()=>{
+        const b = currentBoard();
+        if(!b) return;
+        b.color = sw.dataset.color;
+        persist();
+        renderAll();
+      });
+    });
+
+    customColor.addEventListener('input', ()=>{
+      const b = currentBoard();
+      if(!b) return;
+      b.color = customColor.value;
       persist();
       renderAll();
     });
