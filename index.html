@@ -229,8 +229,28 @@
     pointer-events:none;
   }
 
+  .cell:not(.playable):hover{
+    border-color:#3d4460;
+    background:#242838;
+  }
+  .cell:focus-within{
+    border-color:var(--accent);
+    box-shadow:0 0 0 2px rgba(124,92,255,.35);
+  }
+
   .cell.playable{cursor:pointer;}
-  .cell.playable:hover{border-color:var(--accent);}
+  .cell.playable:hover{
+    border-color:var(--accent);
+    background:#242938;
+    transform:translateY(-1px);
+  }
+  .cell.playable:active{transform:translateY(0);}
+  .cell.playable:focus-visible{
+    outline:none;
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(124,92,255,.45);
+  }
+  .cell.checked:hover{background:var(--checked);}
   .cell.checked{
     background:var(--checked);
     border-color:#4caf6b;
@@ -549,16 +569,23 @@
         cell.appendChild(ed);
       }else{
         cell.classList.add('playable');
+        cell.tabIndex = 0;
+        cell.setAttribute('role', 'checkbox');
+        cell.setAttribute('aria-checked', String(b.checked[i]));
         if(b.checked[i]) cell.classList.add('checked');
         if(winInfo.win.has(i)) cell.classList.add('bingo');
         const label = document.createElement('div');
         label.className = 'label';
         label.textContent = b.texts[i];
         cell.appendChild(label);
-        cell.addEventListener('click', ()=>{
+        const toggle = ()=>{
           b.checked[i] = !b.checked[i];
           persist();
           renderBoard();
+        };
+        cell.addEventListener('click', toggle);
+        cell.addEventListener('keydown', (e)=>{
+          if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); }
         });
       }
       board.appendChild(cell);
