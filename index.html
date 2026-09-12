@@ -95,9 +95,28 @@
     font-size:11.5px;
     color:var(--muted);
     text-decoration:none;
-    margin-top:-4px;
   }
   .guide-link:hover{color:var(--text);text-decoration:underline;}
+
+  .skin-section{
+    margin-top:auto;
+    padding-top:12px;
+    border-top:1px solid var(--cell-border);
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .skin-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:var(--muted);
+  }
+  .skin-section .btn{
+    font-size:12.5px;
+    padding:6px 10px;
+    align-self:flex-start;
+  }
   #guide{
     background:var(--cell);
     border:1px solid var(--cell-border);
@@ -412,6 +431,21 @@
   </details>
   <div id="boardList"></div>
   <button class="btn primary full" id="newBoardBtn" data-i18n="new_board_btn">+ Nouvelle grille</button>
+
+  <div id="skinSection" class="skin-section">
+    <div class="skin-label" data-i18n="skin_label">Apparence de la grille</div>
+    <button class="btn" id="jokerBtn" data-i18n="joker_btn" data-i18n-title="joker_title" title="Case centrale offerte">★ Joker</button>
+    <div class="colorpicker" id="colorPicker">
+      <button class="swatch" data-color="#7c5cff" style="background:#7c5cff" data-i18n-title="color_violet" title="Violet"></button>
+      <button class="swatch" data-color="#ff5c8a" style="background:#ff5c8a" data-i18n-title="color_rose" title="Rose"></button>
+      <button class="swatch" data-color="#22c55e" style="background:#22c55e" data-i18n-title="color_vert" title="Vert"></button>
+      <button class="swatch" data-color="#38bdf8" style="background:#38bdf8" data-i18n-title="color_bleu" title="Bleu"></button>
+      <button class="swatch" data-color="#f97316" style="background:#f97316" data-i18n-title="color_orange" title="Orange"></button>
+      <button class="swatch" data-color="#eab308" style="background:#eab308" data-i18n-title="color_jaune" title="Jaune"></button>
+      <input type="color" id="customColor" data-i18n-title="color_custom" title="Couleur personnalisée">
+    </div>
+  </div>
+
   <a class="guide-link" href="guide.html" data-i18n="guide_link">📖 C'est quoi un Bingo Stream ?</a>
 </aside>
 
@@ -424,18 +458,8 @@
       <option value="6">6x6</option>
       <option value="7">7x7</option>
     </select>
-    <button class="btn primary" id="finishBtn" data-i18n="finish_btn">Terminer le bingo</button>
+    <button class="btn primary" id="finishBtn" data-i18n="finish_btn">Lancer le bingo</button>
     <button class="btn" id="editBtn" data-i18n="edit_btn">Modifier</button>
-    <button class="btn" id="jokerBtn" data-i18n="joker_btn" data-i18n-title="joker_title" title="Case centrale offerte">★ Joker</button>
-    <div class="colorpicker" id="colorPicker">
-      <button class="swatch" data-color="#7c5cff" style="background:#7c5cff" data-i18n-title="color_violet" title="Violet"></button>
-      <button class="swatch" data-color="#ff5c8a" style="background:#ff5c8a" data-i18n-title="color_rose" title="Rose"></button>
-      <button class="swatch" data-color="#22c55e" style="background:#22c55e" data-i18n-title="color_vert" title="Vert"></button>
-      <button class="swatch" data-color="#38bdf8" style="background:#38bdf8" data-i18n-title="color_bleu" title="Bleu"></button>
-      <button class="swatch" data-color="#f97316" style="background:#f97316" data-i18n-title="color_orange" title="Orange"></button>
-      <button class="swatch" data-color="#eab308" style="background:#eab308" data-i18n-title="color_jaune" title="Jaune"></button>
-      <input type="color" id="customColor" data-i18n-title="color_custom" title="Couleur personnalisée">
-    </div>
     <button class="btn" id="renameBtn" data-i18n="rename_btn">Renommer</button>
     <button class="btn" id="embedBtn" data-i18n="embed_btn">Copier le lien Embed</button>
     <button class="btn danger" id="resetBtn" data-i18n="reset_btn">Vider la grille</button>
@@ -483,15 +507,16 @@
       guide_summary: 'Comment ça marche ?',
       guide_1: 'Choisis une taille (4x4 à 7x7).',
       guide_2: 'Clique une case et écris ton texte.',
-      guide_3: 'Clique <b>Terminer le bingo</b> pour verrouiller.',
+      guide_3: 'Clique <b>Lancer le bingo</b> pour passer en mode jeu.',
       guide_4: 'Coche les cases en live : une ligne, colonne ou diagonale complète se surligne en or.',
       guide_5: 'Copie le lien <b>Embed</b> d\'une grille et colle-le dans une source "Navigateur" OBS (coche "Fond transparent"). Ça s\'actualise en direct.',
       guide_p: 'Tu peux créer plusieurs grilles ci-dessous et garder chacune dans une source OBS différente.',
       guide_link: '📖 C\'est quoi un Bingo Stream ?',
       new_board_btn: '+ Nouvelle grille',
       size_label: 'Taille',
-      finish_btn: 'Terminer le bingo',
+      finish_btn: 'Lancer le bingo',
       edit_btn: 'Modifier',
+      skin_label: 'Apparence de la grille',
       joker_btn: '★ Joker',
       joker_title: 'Case centrale offerte',
       joker_label: '★ JOKER',
@@ -508,7 +533,7 @@
       prompt_embed_fallback: 'Copie ce lien dans OBS :',
       confirm_delete: (name)=> `Supprimer "${name}" ?`,
       confirm_reset: (name)=> `Vider "${name}" ?`,
-      status_setup: 'Remplis les cases puis clique "Terminer le bingo".',
+      status_setup: 'Remplis les cases puis clique "Lancer le bingo".',
       status_play: 'Clique sur les cases au fur et à mesure.',
       status_win: '🎉 BINGO !',
       empty_waiting: 'En attente de la configuration de la grille...',
@@ -521,15 +546,16 @@
       guide_summary: 'How does it work?',
       guide_1: 'Pick a size (4x4 to 7x7).',
       guide_2: 'Click a cell and type your text.',
-      guide_3: 'Click <b>Finish the bingo</b> to lock it.',
+      guide_3: 'Click <b>Start the bingo</b> to switch to play mode.',
       guide_4: 'Check cells live: a full row, column or diagonal lights up gold.',
       guide_5: 'Copy a board\'s <b>Embed</b> link and paste it into an OBS "Browser" source (check "Transparent background"). It updates live.',
       guide_p: 'You can create several boards below and keep each one in a different OBS source.',
       guide_link: '📖 What is a Stream Bingo?',
       new_board_btn: '+ New board',
       size_label: 'Size',
-      finish_btn: 'Finish the bingo',
+      finish_btn: 'Start the bingo',
       edit_btn: 'Edit',
+      skin_label: 'Board appearance',
       joker_btn: '★ Joker',
       joker_title: 'Free center cell',
       joker_label: '★ JOKER',
@@ -546,7 +572,7 @@
       prompt_embed_fallback: 'Copy this link into OBS:',
       confirm_delete: (name)=> `Delete "${name}"?`,
       confirm_reset: (name)=> `Clear "${name}"?`,
-      status_setup: 'Fill in the cells then click "Finish the bingo".',
+      status_setup: 'Fill in the cells then click "Start the bingo".',
       status_play: 'Click cells as you go.',
       status_win: '🎉 BINGO!',
       empty_waiting: 'Waiting for the board to be set up...',
@@ -792,10 +818,8 @@
     sizeSelect.disabled = isPlay;
     if(jokerBtn){
       jokerBtn.classList.toggle('active', !!b.joker);
-      jokerBtn.style.display = isEmbed ? 'none' : 'inline-block';
     }
     if(colorPicker){
-      colorPicker.style.display = isEmbed ? 'none' : 'flex';
       colorPicker.querySelectorAll('.swatch').forEach(sw=>{
         sw.classList.toggle('active', (b.color || DEFAULT_COLOR).toLowerCase() === sw.dataset.color.toLowerCase());
       });
