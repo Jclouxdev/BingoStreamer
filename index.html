@@ -492,23 +492,6 @@
     font-size:13px;
     color:var(--muted);
   }
-  .modal-url{
-    width:100%;
-    background:var(--cell);
-    color:var(--text);
-    border:1px solid var(--cell-border);
-    border-radius:8px;
-    padding:10px 12px;
-    font-size:13px;
-    font-family:monospace;
-  }
-  .modal-steps{
-    margin:4px 0 4px;
-    padding-left:18px;
-    font-size:13px;
-    color:var(--muted);
-  }
-  .modal-steps li{margin-bottom:5px;}
 
   @media (max-width:760px){
     body{flex-direction:column;overflow-y:auto;overflow-x:hidden;height:auto;min-height:100dvh;}
@@ -598,22 +581,6 @@
   <div id="status"></div>
 </main>
 
-<div id="modalOverlay" class="modal-overlay" hidden>
-  <div class="modal-box" role="dialog" aria-modal="true">
-    <div class="modal-title" data-i18n="modal_title">Lien Embed copié !</div>
-    <p class="modal-text" id="modalClipStatus"></p>
-    <input type="text" id="modalUrlInput" class="modal-url" readonly>
-    <button class="btn primary full" id="modalCopyBtn" data-i18n="modal_copy_again">Copier à nouveau</button>
-    <ol class="modal-steps">
-      <li data-i18n="modal_step1">Dans OBS : Source → + → Navigateur.</li>
-      <li data-i18n="modal_step2">Colle ce lien dans le champ URL.</li>
-      <li data-i18n="modal_step3">Coche "Fond transparent (page transparente)".</li>
-      <li data-i18n="modal_step4">Une popup apparaîtra ici pour approuver la connexion (une seule fois).</li>
-    </ol>
-    <button class="btn full" id="modalCloseBtn" data-i18n="modal_close">Fermer</button>
-  </div>
-</div>
-
 <div id="pairingOverlay" class="modal-overlay" hidden>
   <div class="modal-box" role="dialog" aria-modal="true">
     <div class="modal-title" data-i18n="pairing_title">📡 Nouvel appareil demande à se connecter</div>
@@ -685,11 +652,6 @@
   const langToggle = document.getElementById('langToggle');
   const themeToggle = document.getElementById('themeToggle');
   const pendingSection = document.getElementById('pendingSection');
-  const modalOverlay = document.getElementById('modalOverlay');
-  const modalClipStatus = document.getElementById('modalClipStatus');
-  const modalUrlInput = document.getElementById('modalUrlInput');
-  const modalCopyBtn = document.getElementById('modalCopyBtn');
-  const modalCloseBtn = document.getElementById('modalCloseBtn');
   const pairingOverlay = document.getElementById('pairingOverlay');
   const pairingApproveBtn = document.getElementById('pairingApproveBtn');
   const pairingLaterBtn = document.getElementById('pairingLaterBtn');
@@ -760,18 +722,9 @@
       rename_btn: 'Renommer',
       embed_btn: 'Copier le lien Embed',
       embed_copied: 'Lien copié !',
-      modal_title: 'Lien Embed copié !',
-      modal_copy_again: 'Copier à nouveau',
-      modal_step1: 'Dans OBS : Source → + → Navigateur.',
-      modal_step2: 'Colle ce lien dans le champ URL.',
-      modal_step3: 'Coche "Fond transparent (page transparente)".',
-      modal_step4: 'Une popup apparaîtra ici pour approuver la connexion (une seule fois).',
       pairing_title: '📡 Nouvel appareil demande à se connecter',
       pairing_text: "Si tu viens d'ajouter la source dans OBS, c'est elle. Clique Approuver pour débloquer la grille.",
       pairing_later: 'Plus tard',
-      modal_close: 'Fermer',
-      modal_clip_ok: '✅ Copié dans le presse-papier.',
-      modal_clip_fail: '⚠️ Copie automatique impossible, sélectionne le lien ci-dessous manuellement.',
       reset_btn: 'Vider la grille',
       delete_title: 'Supprimer',
       board_default_name: 'Grille',
@@ -815,18 +768,9 @@
       rename_btn: 'Rename',
       embed_btn: 'Copy Embed link',
       embed_copied: 'Link copied!',
-      modal_title: 'Embed link copied!',
-      modal_copy_again: 'Copy again',
-      modal_step1: 'In OBS: Sources → + → Browser.',
-      modal_step2: 'Paste this link in the URL field.',
-      modal_step3: 'Check "Transparent background".',
-      modal_step4: 'A popup will appear here to approve the connection (only once).',
       pairing_title: '📡 A new device wants to connect',
       pairing_text: "If you just added the source in OBS, that's it. Click Approve to unlock the board.",
       pairing_later: 'Later',
-      modal_close: 'Close',
-      modal_clip_ok: '✅ Copied to clipboard.',
-      modal_clip_fail: '⚠️ Could not copy automatically, select the link below manually.',
       reset_btn: 'Clear board',
       delete_title: 'Delete',
       board_default_name: 'Board',
@@ -1429,44 +1373,17 @@
       renderAll();
     });
 
-    function openEmbedModal(url, clipOk){
-      modalUrlInput.value = url;
-      modalClipStatus.textContent = t(clipOk ? 'modal_clip_ok' : 'modal_clip_fail');
-      modalOverlay.hidden = false;
-      modalUrlInput.focus();
-      modalUrlInput.select();
-    }
-
-    function closeEmbedModal(){
-      modalOverlay.hidden = true;
-    }
-
-    modalCopyBtn.addEventListener('click', async ()=>{
-      modalUrlInput.select();
-      try{
-        await navigator.clipboard.writeText(modalUrlInput.value);
-        modalClipStatus.textContent = t('modal_clip_ok');
-      }catch(e){
-        modalClipStatus.textContent = t('modal_clip_fail');
-      }
-    });
-    modalCloseBtn.addEventListener('click', closeEmbedModal);
-    modalOverlay.addEventListener('click', (e)=>{ if(e.target === modalOverlay) closeEmbedModal(); });
-    document.addEventListener('keydown', (e)=>{
-      if(e.key === 'Escape' && !modalOverlay.hidden) closeEmbedModal();
-    });
-
     embedBtn.addEventListener('click', async ()=>{
       const b = currentBoard();
       if(!b) return;
       const url = location.origin + location.pathname + '?embed=' + b.id;
-      let clipOk = true;
       try{
         await navigator.clipboard.writeText(url);
+        embedBtn.textContent = t('embed_copied');
       }catch(e){
-        clipOk = false;
+        prompt(t('prompt_embed_fallback'), url);
       }
-      openEmbedModal(url, clipOk);
+      setTimeout(()=>{ embedBtn.textContent = t('embed_btn'); }, 1800);
     });
 
     resetBtn.addEventListener('click', ()=>{
