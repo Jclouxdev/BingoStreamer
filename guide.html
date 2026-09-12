@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qu'est-ce qu'un Bingo Stream ? Guide complet pour Twitch & YouTube</title>
+<meta name="description" content="Qu'est-ce qu'un bingo de stream, pourquoi les streamers Twitch et YouTube l'utilisent, et comment en créer un gratuitement en 2 minutes avec intégration OBS.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://jclouxdev.github.io/BingoStreamer/guide.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E">
+
+<meta property="og:type" content="article">
+<meta property="og:title" content="Qu'est-ce qu'un Bingo Stream ? Guide complet">
+<meta property="og:description" content="Pourquoi et comment utiliser un bingo de stream sur Twitch ou YouTube, gratuitement.">
+<meta property="og:url" content="https://jclouxdev.github.io/BingoStreamer/guide.html">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Combien de cases doit avoir un bingo de stream ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "La taille classique va de 4x4 (16 cases) à 7x7 (49 cases). Une grille 5x5 est le format le plus courant : assez de cases pour durer tout un stream, sans être trop longue à remplir avant de lancer." }
+    },
+    {
+      "@type": "Question",
+      "name": "Comment cocher les cases du bingo pendant le stream ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Une fois la grille terminée, chaque case devient cliquable. Un clic (ou Entrée/Espace au clavier) la coche en direct, et une ligne, colonne ou diagonale complète se surligne automatiquement." }
+    },
+    {
+      "@type": "Question",
+      "name": "Peut-on afficher le bingo directement dans OBS ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Oui. Un lien d'intégration (embed) dédié permet d'ajouter la grille comme source Navigateur dans OBS avec un fond transparent, mise à jour en direct pendant que tu coches les cases." }
+    },
+    {
+      "@type": "Question",
+      "name": "Faut-il payer pour un générateur de bingo stream ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Non. Bingo Stream est entièrement gratuit, sans compte à créer, et fonctionne directement dans le navigateur." }
+    }
+  ]
+}
+</script>
+
+<style>
+  :root{
+    --bg:#0f1117;
+    --panel:#171a23;
+    --cell:#1e2230;
+    --cell-border:#2c3142;
+    --text:#eef0f5;
+    --muted:#8a90a3;
+    --accent:#7c5cff;
+    --gold:#ffd166;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Segoe UI', Roboto, Arial, sans-serif;
+    line-height:1.65;
+  }
+  .wrap{
+    max-width:720px;
+    margin:0 auto;
+    padding:40px 20px 80px;
+  }
+  a{color:var(--accent);}
+  h1{font-size:28px;margin-bottom:4px;}
+  h2{font-size:20px;margin-top:40px;color:var(--gold);}
+  .backlink{
+    display:inline-block;
+    margin-bottom:24px;
+    font-size:13px;
+    color:var(--muted);
+    text-decoration:none;
+  }
+  .backlink:hover{color:var(--text);}
+  .lede{color:var(--muted);font-size:15px;}
+  .cta{
+    display:inline-block;
+    margin-top:14px;
+    background:var(--accent);
+    color:#fff;
+    text-decoration:none;
+    padding:12px 22px;
+    border-radius:10px;
+    font-weight:600;
+  }
+  .cta:hover{filter:brightness(1.1);}
+  .card{
+    background:var(--panel);
+    border:1px solid var(--cell-border);
+    border-radius:14px;
+    padding:20px 24px;
+    margin:24px 0;
+  }
+  details{
+    background:var(--cell);
+    border:1px solid var(--cell-border);
+    border-radius:10px;
+    padding:10px 16px;
+    margin-bottom:10px;
+  }
+  summary{cursor:pointer;font-weight:600;}
+  footer{margin-top:60px;font-size:12px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="backlink" href="index.html">← Retour à l'outil Bingo Stream</a>
+
+  <h1>Qu'est-ce qu'un Bingo Stream ?</h1>
+  <p class="lede">Le guide complet pour comprendre le bingo de stream, pourquoi les streamers Twitch et YouTube l'adorent, et comment en lancer un gratuitement en quelques minutes.</p>
+
+  <p>Un <strong>bingo stream</strong> (ou bingo de live) est une grille de cases remplies avec des événements, phrases ou memes récurrents d'un stream : "rage quit", "chat spam", "premier sub", "boss raté trois fois"... Pendant le direct, le streamer ou la communauté coche les cases au fur et à mesure que ça arrive. Quand une ligne, une colonne ou une diagonale se complète : bingo.</p>
+
+  <h2>Pourquoi utiliser un bingo de stream sur Twitch ou YouTube ?</h2>
+  <p>C'est un format d'animation simple qui coche plusieurs cases à la fois (sans mauvais jeu de mots) :</p>
+  <div class="card">
+    <ul>
+      <li><strong>Engagement communauté</strong> — le chat guette activement les événements de la grille, ça relance l'interaction pendant les moments creux.</li>
+      <li><strong>Moments de clip</strong> — un bingo complété en plein milieu d'un run difficile ou d'un moment absurde fait un excellent clip.</li>
+      <li><strong>Running gags</strong> — reprendre les mêmes cases stream après stream construit des private jokes avec la communauté.</li>
+      <li><strong>Zéro préparation lourde</strong> — une grille se remplit en deux minutes avant de lancer le live.</li>
+    </ul>
+  </div>
+
+  <h2>Comment créer un bingo de stream gratuit en 2 minutes</h2>
+  <ol>
+    <li>Ouvre le <a href="index.html">générateur de bingo stream gratuit</a>.</li>
+    <li>Choisis une taille de grille, de 4x4 à 7x7 (5x5 est le format le plus utilisé).</li>
+    <li>Clique chaque case et écris ton texte — la police s'ajuste automatiquement.</li>
+    <li>Clique <strong>« Terminer le bingo »</strong> : la grille se verrouille et passe en mode « je coche ».</li>
+    <li>Pendant le live, clique une case (ou utilise les flèches du clavier) pour la cocher en direct.</li>
+  </ol>
+  <p><a class="cta" href="index.html">Créer mon Bingo Stream gratuitement →</a></p>
+
+  <h2>Bingo Stream avec OBS : l'intégrer en overlay transparent</h2>
+  <p>Le générateur inclut un lien <strong>Embed</strong> par grille : colle-le dans une source « Navigateur » OBS, coche « Fond transparent », et la grille s'affiche directement en overlay sur le stream — synchronisée en direct avec les cases que tu coches depuis ton panneau de contrôle. Aucune extension, aucun compte, aucun plugin à installer.</p>
+
+  <h2>Bingo Stream gratuit vs payant : pourquoi ne pas payer pour ça</h2>
+  <p>Beaucoup d'outils de bingo pour streamers sont payants ou verrouillés derrière un abonnement, alors que la fonctionnalité de base — une grille personnalisable qu'on coche en live — ne justifie pas un paywall. Ce générateur est gratuit, fonctionne entièrement dans le navigateur (aucune donnée envoyée à un serveur, tout reste en local), et le restera.</p>
+
+  <h2>Questions fréquentes</h2>
+  <details>
+    <summary>Combien de cases doit avoir un bingo de stream ?</summary>
+    <p>La taille classique va de 4x4 (16 cases) à 7x7 (49 cases). Une grille 5x5 est le format le plus courant : assez de cases pour durer tout un stream, sans être trop longue à remplir avant de lancer.</p>
+  </details>
+  <details>
+    <summary>Comment cocher les cases pendant le stream ?</summary>
+    <p>Une fois la grille terminée, chaque case devient cliquable. Un clic (ou Entrée/Espace au clavier) la coche en direct, et une ligne, colonne ou diagonale complète se surligne automatiquement.</p>
+  </details>
+  <details>
+    <summary>Peut-on afficher le bingo directement dans OBS ?</summary>
+    <p>Oui, via un lien d'intégration dédié à ajouter comme source Navigateur, avec fond transparent et mise à jour en direct.</p>
+  </details>
+  <details>
+    <summary>Faut-il payer pour un générateur de bingo stream ?</summary>
+    <p>Non. C'est entièrement gratuit, sans compte à créer.</p>
+  </details>
+
+  <p><a class="cta" href="index.html">Lancer mon Bingo Stream →</a></p>
+
+  <footer>
+    <p><a href="index.html">Bingo Stream</a> — générateur de bingo gratuit pour streamers Twitch et YouTube.</p>
+  </footer>
+</div>
+</body>
+</html>
