@@ -469,6 +469,7 @@
     padding:20px;
     z-index:100;
   }
+  .modal-overlay[hidden]{display:none !important;}
   .modal-box{
     background:var(--panel);
     border:1px solid var(--cell-border);
@@ -607,9 +608,18 @@
       <li data-i18n="modal_step1">Dans OBS : Source → + → Navigateur.</li>
       <li data-i18n="modal_step2">Colle ce lien dans le champ URL.</li>
       <li data-i18n="modal_step3">Coche "Fond transparent (page transparente)".</li>
-      <li data-i18n="modal_step4">Approuve la demande de connexion dans la sidebar (une seule fois).</li>
+      <li data-i18n="modal_step4">Une popup apparaîtra ici pour approuver la connexion (une seule fois).</li>
     </ol>
     <button class="btn full" id="modalCloseBtn" data-i18n="modal_close">Fermer</button>
+  </div>
+</div>
+
+<div id="pairingOverlay" class="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true">
+    <div class="modal-title" data-i18n="pairing_title">📡 Nouvel appareil demande à se connecter</div>
+    <p class="modal-text" data-i18n="pairing_text">Si tu viens d'ajouter la source dans OBS, c'est elle. Clique Approuver pour débloquer la grille.</p>
+    <button class="btn primary full" id="pairingApproveBtn" data-i18n="approve_btn">Approuver</button>
+    <button class="btn full" id="pairingLaterBtn" data-i18n="pairing_later">Plus tard</button>
   </div>
 </div>
 
@@ -680,6 +690,9 @@
   const modalUrlInput = document.getElementById('modalUrlInput');
   const modalCopyBtn = document.getElementById('modalCopyBtn');
   const modalCloseBtn = document.getElementById('modalCloseBtn');
+  const pairingOverlay = document.getElementById('pairingOverlay');
+  const pairingApproveBtn = document.getElementById('pairingApproveBtn');
+  const pairingLaterBtn = document.getElementById('pairingLaterBtn');
 
   const DEFAULT_COLOR = '#7c5cff';
   const LANG_KEY = 'bingo-stream-lang';
@@ -752,7 +765,10 @@
       modal_step1: 'Dans OBS : Source → + → Navigateur.',
       modal_step2: 'Colle ce lien dans le champ URL.',
       modal_step3: 'Coche "Fond transparent (page transparente)".',
-      modal_step4: 'Approuve la demande de connexion dans la sidebar (une seule fois).',
+      modal_step4: 'Une popup apparaîtra ici pour approuver la connexion (une seule fois).',
+      pairing_title: '📡 Nouvel appareil demande à se connecter',
+      pairing_text: "Si tu viens d'ajouter la source dans OBS, c'est elle. Clique Approuver pour débloquer la grille.",
+      pairing_later: 'Plus tard',
       modal_close: 'Fermer',
       modal_clip_ok: '✅ Copié dans le presse-papier.',
       modal_clip_fail: '⚠️ Copie automatique impossible, sélectionne le lien ci-dessous manuellement.',
@@ -804,7 +820,10 @@
       modal_step1: 'In OBS: Sources → + → Browser.',
       modal_step2: 'Paste this link in the URL field.',
       modal_step3: 'Check "Transparent background".',
-      modal_step4: 'Approve the pairing request in the sidebar (only once).',
+      modal_step4: 'A popup will appear here to approve the connection (only once).',
+      pairing_title: '📡 A new device wants to connect',
+      pairing_text: "If you just added the source in OBS, that's it. Click Approve to unlock the board.",
+      pairing_later: 'Later',
       modal_close: 'Close',
       modal_clip_ok: '✅ Copied to clipboard.',
       modal_clip_fail: '⚠️ Could not copy automatically, select the link below manually.',
@@ -984,11 +1003,45 @@
   let activeDataOff = null;
   let activePendingOff = null;
   let pendingList = [];
+  let dismissedPendingTokens = new Set();
+  let activePairingToken = null;
+
+  function maybeShowPairingModal(){
+    const candidate = pendingList.find(function(p){ return !dismissedPendingTokens.has(p.token); });
+    if(candidate){
+      activePairingToken = candidate.token;
+      pairingOverlay.hidden = false;
+    }else{
+      pairingOverlay.hidden = true;
+      activePairingToken = null;
+    }
+  }
+
+  function hidePairingModal(dismiss){
+    if(dismiss && activePairingToken) dismissedPendingTokens.add(activePairingToken);
+    pairingOverlay.hidden = true;
+    activePairingToken = null;
+    maybeShowPairingModal();
+  }
+
+  pairingApproveBtn.addEventListener('click', function(){
+    const entry = pendingList.find(function(p){ return p.token === activePairingToken; });
+    if(entry) approveDevice(entry.boardId, entry.token);
+    pairingOverlay.hidden = true;
+    activePairingToken = null;
+  });
+  pairingLaterBtn.addEventListener('click', function(){ hidePairingModal(true); });
+  pairingOverlay.addEventListener('click', function(e){ if(e.target === pairingOverlay) hidePairingModal(true); });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && !pairingOverlay.hidden) hidePairingModal(true);
+  });
 
   function subscribeActiveBoardCloud(){
     if(activeDataOff){ activeDataOff(); activeDataOff = null; }
     if(activePendingOff){ activePendingOff(); activePendingOff = null; }
     pendingList = [];
+    pairingOverlay.hidden = true;
+    activePairingToken = null;
     if(isEmbed || !db) return;
     const b = getBoard(state.activeId);
     if(!b) { renderPending(); return; }
@@ -1013,6 +1066,7 @@
       const val = snap.val() || {};
       pendingList = Object.keys(val).map(function(token){ return { token: token, boardId: b.id }; });
       renderPending();
+      maybeShowPairingModal();
     };
     pendingRef.on('value', pendingHandler);
     activePendingOff = function(){ pendingRef.off('value', pendingHandler); };
