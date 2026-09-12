@@ -43,8 +43,56 @@
     --accent:#7c5cff;
     --accent2:#ff5c8a;
     --gold:#ffd166;
+    --gold-text:#ffd166;
     --checked:#2d3a2d;
+    --checked-border:#4caf6b;
+    --cell-hover-bg:#242938;
+    --cell-hover-border:#3d4460;
+    --joker-bg-1:#3a2f13;
+    --joker-bg-2:#2a2410;
+    --bingo-bg-1:#3a2f13;
+    --bingo-bg-2:#4a3a10;
     --radius:14px;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f4f5f9;
+      --panel:#ffffff;
+      --cell:#f1f2f7;
+      --cell-border:#dde0ea;
+      --text:#15161c;
+      --muted:#6b7280;
+      --accent2:#d6336c;
+      --gold:#b8860b;
+      --gold-text:#8a5a00;
+      --checked:#dff5e3;
+      --checked-border:#2f9e57;
+      --cell-hover-bg:#e9ebf3;
+      --cell-hover-border:#c3c8d6;
+      --joker-bg-1:#fff4d6;
+      --joker-bg-2:#ffe9b3;
+      --bingo-bg-1:#fff4d6;
+      --bingo-bg-2:#ffe1a3;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f4f5f9;
+    --panel:#ffffff;
+    --cell:#f1f2f7;
+    --cell-border:#dde0ea;
+    --text:#15161c;
+    --muted:#6b7280;
+    --accent2:#d6336c;
+    --gold:#b8860b;
+    --gold-text:#8a5a00;
+    --checked:#dff5e3;
+    --checked-border:#2f9e57;
+    --cell-hover-bg:#e9ebf3;
+    --cell-hover-border:#c3c8d6;
+    --joker-bg-1:#fff4d6;
+    --joker-bg-2:#ffe9b3;
+    --bingo-bg-1:#fff4d6;
+    --bingo-bg-2:#ffe1a3;
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
@@ -262,7 +310,7 @@
     cursor:pointer;
     padding:0;
   }
-  .swatch.active{border-color:#fff;box-shadow:0 0 0 2px var(--panel), 0 0 0 3px #fff;}
+  .swatch.active{border-color:var(--text);box-shadow:0 0 0 2px var(--panel), 0 0 0 3px var(--text);}
   #customColor{
     width:26px;
     height:26px;
@@ -341,17 +389,17 @@
   }
 
   .cell:not(.playable):not(.joker-cell):hover{
-    border-color:#3d4460;
-    background:#242838;
+    border-color:var(--cell-hover-border);
+    background:var(--cell-hover-bg);
   }
 
   .cell.joker-cell{
     cursor:default;
-    background:linear-gradient(135deg, #3a2f13, #2a2410);
+    background:linear-gradient(135deg, var(--joker-bg-1), var(--joker-bg-2));
     border-color:var(--gold);
   }
   .cell.joker-cell .edit, .cell.joker-cell .label{
-    color:var(--gold);
+    color:var(--gold-text);
     font-weight:700;
     pointer-events:none;
   }
@@ -363,7 +411,7 @@
   .cell.playable{cursor:pointer;}
   .cell.playable:hover{
     border-color:var(--accent);
-    background:#242938;
+    background:var(--cell-hover-bg);
     transform:translateY(-1px);
   }
   .cell.playable:active{transform:translateY(0);}
@@ -375,7 +423,7 @@
   .cell.checked:hover{background:var(--checked);}
   .cell.checked{
     background:var(--checked);
-    border-color:#4caf6b;
+    border-color:var(--checked-border);
   }
   .cell.checked::after{
     content:"";
@@ -385,11 +433,11 @@
   }
 
   .cell.bingo{
-    background:linear-gradient(135deg, #3a2f13, #4a3a10);
+    background:linear-gradient(135deg, var(--bingo-bg-1), var(--bingo-bg-2));
     border-color:var(--gold);
     box-shadow:0 0 14px rgba(255,209,102,.45);
   }
-  .cell.bingo .label{color:var(--gold);font-weight:600;}
+  .cell.bingo .label{color:var(--gold-text);font-weight:600;}
 
   #status{
     flex:0 0 auto;
@@ -398,7 +446,7 @@
     text-align:center;
   }
   #status.win{
-    color:var(--gold);
+    color:var(--gold-text);
     font-size:16px;
     font-weight:600;
   }
@@ -437,6 +485,10 @@
   <div class="langtoggle" id="langToggle">
     <button class="lang-btn" data-lang="fr">FR</button>
     <button class="lang-btn" data-lang="en">EN</button>
+  </div>
+  <div class="langtoggle" id="themeToggle">
+    <button class="lang-btn" data-theme-choice="dark" title="Mode sombre">🌙</button>
+    <button class="lang-btn" data-theme-choice="light" title="Mode clair">☀️</button>
   </div>
   <details id="guide" open>
     <summary data-i18n="guide_summary">Comment ça marche ?</summary>
@@ -552,10 +604,46 @@
   const embedBtn = document.getElementById('embedBtn');
   const resetBtn = document.getElementById('resetBtn');
   const langToggle = document.getElementById('langToggle');
+  const themeToggle = document.getElementById('themeToggle');
   const pendingSection = document.getElementById('pendingSection');
 
   const DEFAULT_COLOR = '#7c5cff';
   const LANG_KEY = 'bingo-stream-lang';
+  const THEME_KEY = 'bingo-stream-theme';
+
+  function detectTheme(){
+    try{
+      const saved = localStorage.getItem(THEME_KEY);
+      if(saved === 'light' || saved === 'dark') return saved;
+    }catch(e){}
+    return null;
+  }
+
+  let currentTheme = detectTheme();
+
+  function applyThemeMode(){
+    if(currentTheme) document.documentElement.setAttribute('data-theme', currentTheme);
+    else document.documentElement.removeAttribute('data-theme');
+    if(themeToggle){
+      const effective = currentTheme || (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      themeToggle.querySelectorAll('.lang-btn').forEach(function(btn){
+        btn.classList.toggle('active', btn.dataset.themeChoice === effective);
+      });
+    }
+  }
+
+  function setThemeMode(choice){
+    currentTheme = choice;
+    try{ localStorage.setItem(THEME_KEY, choice); }catch(e){}
+    applyThemeMode();
+  }
+
+  if(themeToggle){
+    themeToggle.querySelectorAll('.lang-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ setThemeMode(btn.dataset.themeChoice); });
+    });
+  }
+  applyThemeMode();
 
   const TRANSLATIONS = {
     fr: {
