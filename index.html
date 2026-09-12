@@ -117,6 +117,26 @@
     padding:6px 10px;
     align-self:flex-start;
   }
+  .pending-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .pending-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--gold);
+    box-shadow:0 0 6px var(--gold);
+    flex-shrink:0;
+  }
+  #pendingSection .btn{font-size:12.5px;padding:6px 10px;}
+  #embedWait{
+    color:var(--muted);
+    font-size:15px;
+    text-align:center;
+    padding:0 20px;
+  }
   #guide{
     background:var(--cell);
     border:1px solid var(--cell-border);
@@ -426,11 +446,14 @@
       <li data-i18n-html="guide_3">Clique <b>Terminer le bingo</b> pour verrouiller.</li>
       <li data-i18n="guide_4">Coche les cases en live : une ligne, colonne ou diagonale complète se surligne en or.</li>
       <li data-i18n-html="guide_5">Copie le lien <b>Embed</b> d'une grille et colle-le dans une source "Navigateur" OBS (coche "Fond transparent"). Ça s'actualise en direct.</li>
+      <li data-i18n-html="guide_6">La 1ère fois, clique <b>Approuver</b> dans la sidebar quand OBS demande la connexion. Ensuite c'est automatique.</li>
     </ol>
     <p data-i18n="guide_p">Tu peux créer plusieurs grilles ci-dessous et garder chacune dans une source OBS différente.</p>
   </details>
   <div id="boardList"></div>
   <button class="btn primary full" id="newBoardBtn" data-i18n="new_board_btn">+ Nouvelle grille</button>
+
+  <div id="pendingSection" class="skin-section" style="display:none;"></div>
 
   <div id="skinSection" class="skin-section">
     <div class="skin-label" data-i18n="skin_label">Apparence de la grille</div>
@@ -469,10 +492,44 @@
   <div id="status"></div>
 </main>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
 (function(){
   const STORAGE_KEY = 'bingo-stream-state-v2';
   const OLD_KEY = 'bingo-stream-state-v1';
+  const DEVICE_KEY = 'bingo-device-token';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAk3_mbSyufo3afPbhX4x-3BsabO9B_s3U",
+    authDomain: "bingostreamer-c0cad.firebaseapp.com",
+    databaseURL: "https://bingostreamer-c0cad-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "bingostreamer-c0cad",
+    storageBucket: "bingostreamer-c0cad.firebasestorage.app",
+    messagingSenderId: "504860974599",
+    appId: "1:504860974599:web:cbc459875be482285614a2",
+    measurementId: "G-4RZYQXX989"
+  };
+
+  let db = null;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  }catch(e){ console.warn('Firebase init failed', e); }
+
+  function makeToken(){
+    if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  }
+
+  function myToken(){
+    try{
+      let tok = localStorage.getItem(DEVICE_KEY);
+      if(!tok){ tok = makeToken(); localStorage.setItem(DEVICE_KEY, tok); }
+      return tok;
+    }catch(e){ return makeToken(); }
+  }
+  const MY_TOKEN = myToken();
 
   const params = new URLSearchParams(location.search);
   const embedId = params.get('embed');
@@ -495,6 +552,7 @@
   const embedBtn = document.getElementById('embedBtn');
   const resetBtn = document.getElementById('resetBtn');
   const langToggle = document.getElementById('langToggle');
+  const pendingSection = document.getElementById('pendingSection');
 
   const DEFAULT_COLOR = '#7c5cff';
   const LANG_KEY = 'bingo-stream-lang';
@@ -510,6 +568,7 @@
       guide_3: 'Clique <b>Lancer le bingo</b> pour passer en mode jeu.',
       guide_4: 'Coche les cases en live : une ligne, colonne ou diagonale complète se surligne en or.',
       guide_5: 'Copie le lien <b>Embed</b> d\'une grille et colle-le dans une source "Navigateur" OBS (coche "Fond transparent"). Ça s\'actualise en direct.',
+      guide_6: 'La 1ère fois, clique <b>Approuver</b> dans la sidebar quand OBS demande la connexion. Ensuite c\'est automatique.',
       guide_p: 'Tu peux créer plusieurs grilles ci-dessous et garder chacune dans une source OBS différente.',
       guide_link: '📖 C\'est quoi un Bingo Stream ?',
       new_board_btn: '+ Nouvelle grille',
@@ -537,7 +596,10 @@
       status_play: 'Clique sur les cases au fur et à mesure.',
       status_win: '🎉 BINGO !',
       empty_waiting: 'En attente de la configuration de la grille...',
-      empty_notfound: 'Grille introuvable.'
+      empty_notfound: 'Grille introuvable.',
+      pending_label: 'Appareil en attente',
+      approve_btn: 'Approuver',
+      embed_pending: "En attente d'autorisation..."
     },
     en: {
       page_title: 'Free Stream Bingo — Bingo Generator for Streamers (OBS, Twitch)',
@@ -549,6 +611,7 @@
       guide_3: 'Click <b>Start the bingo</b> to switch to play mode.',
       guide_4: 'Check cells live: a full row, column or diagonal lights up gold.',
       guide_5: 'Copy a board\'s <b>Embed</b> link and paste it into an OBS "Browser" source (check "Transparent background"). It updates live.',
+      guide_6: 'The first time, click <b>Approve</b> in the sidebar when OBS asks to connect. After that it\'s automatic.',
       guide_p: 'You can create several boards below and keep each one in a different OBS source.',
       guide_link: '📖 What is a Stream Bingo?',
       new_board_btn: '+ New board',
@@ -576,7 +639,10 @@
       status_play: 'Click cells as you go.',
       status_win: '🎉 BINGO!',
       empty_waiting: 'Waiting for the board to be set up...',
-      empty_notfound: 'Board not found.'
+      empty_notfound: 'Board not found.',
+      pending_label: 'Device waiting',
+      approve_btn: 'Approve',
+      embed_pending: 'Waiting for authorization...'
     }
   };
 
@@ -622,7 +688,7 @@
     });
   }
 
-  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function uid(){ return makeToken(); }
 
   function jokerIndex(n){ return Math.floor((n*n)/2); }
 
@@ -684,8 +750,116 @@
     return state.boards.find(b => b.id === id) || null;
   }
 
+  let embedBoardData = null;
+
   function currentBoard(){
-    return getBoard(isEmbed ? embedId : state.activeId);
+    if(isEmbed) return embedBoardData;
+    return getBoard(state.activeId);
+  }
+
+  function boardPayload(b){
+    return {
+      name: b.name, size: b.size, texts: b.texts, checked: b.checked,
+      mode: b.mode, joker: b.joker, color: b.color,
+      lastWriterToken: MY_TOKEN
+    };
+  }
+
+  function syncBoardCloud(b){
+    if(!db || !b) return;
+    db.ref('boards/' + b.id + '/data').update(boardPayload(b)).catch(function(err){
+      console.warn('cloud sync failed', err);
+    });
+  }
+
+  function ensureBoardCloud(b){
+    if(!db || !b) return;
+    const ref = db.ref('boards/' + b.id + '/data');
+    ref.once('value').then(function(snap){
+      if(snap.exists()){
+        syncBoardCloud(b);
+      }else{
+        const payload = boardPayload(b);
+        payload.approvedDevices = {};
+        payload.approvedDevices[MY_TOKEN] = true;
+        ref.set(payload);
+      }
+    }).catch(function(err){ console.warn('ensureBoardCloud failed', err); });
+  }
+
+  function commitBoard(b){
+    if(!isEmbed) persist();
+    syncBoardCloud(b);
+  }
+
+  function approveDevice(boardId, token){
+    if(!db) return;
+    const updates = {};
+    updates['approvedDevices/' + token] = true;
+    updates.lastWriterToken = MY_TOKEN;
+    db.ref('boards/' + boardId + '/data').update(updates);
+    db.ref('boards/' + boardId + '/pending/' + token).remove();
+  }
+
+  let activeDataOff = null;
+  let activePendingOff = null;
+  let pendingList = [];
+
+  function subscribeActiveBoardCloud(){
+    if(activeDataOff){ activeDataOff(); activeDataOff = null; }
+    if(activePendingOff){ activePendingOff(); activePendingOff = null; }
+    pendingList = [];
+    if(isEmbed || !db) return;
+    const b = getBoard(state.activeId);
+    if(!b) { renderPending(); return; }
+
+    const dataRef = db.ref('boards/' + b.id + '/data');
+    const dataHandler = function(snap){
+      const remote = snap.val();
+      if(!remote || remote.lastWriterToken === MY_TOKEN) return;
+      const local = getBoard(b.id);
+      if(!local) return;
+      local.name = remote.name; local.size = remote.size; local.texts = remote.texts;
+      local.checked = remote.checked; local.mode = remote.mode;
+      local.joker = remote.joker; local.color = remote.color;
+      persist();
+      renderBoard();
+    };
+    dataRef.on('value', dataHandler);
+    activeDataOff = function(){ dataRef.off('value', dataHandler); };
+
+    const pendingRef = db.ref('boards/' + b.id + '/pending');
+    const pendingHandler = function(snap){
+      const val = snap.val() || {};
+      pendingList = Object.keys(val).map(function(token){ return { token: token, boardId: b.id }; });
+      renderPending();
+    };
+    pendingRef.on('value', pendingHandler);
+    activePendingOff = function(){ pendingRef.off('value', pendingHandler); };
+  }
+
+  function renderPending(){
+    if(!pendingSection) return;
+    if(!pendingList.length){ pendingSection.style.display = 'none'; pendingSection.innerHTML = ''; return; }
+    pendingSection.style.display = 'flex';
+    pendingSection.innerHTML = '';
+    const label = document.createElement('div');
+    label.className = 'skin-label';
+    label.textContent = t('pending_label');
+    pendingSection.appendChild(label);
+    pendingList.forEach(function(p){
+      const row = document.createElement('div');
+      row.className = 'pending-row';
+      const dot = document.createElement('span');
+      dot.className = 'pending-dot';
+      const approveBtn = document.createElement('button');
+      approveBtn.className = 'btn primary';
+      approveBtn.textContent = t('approve_btn');
+      approveBtn.addEventListener('click', function(){ approveDevice(p.boardId, p.token); });
+      row.appendChild(dot);
+      row.appendChild(approveBtn);
+      pendingSection.appendChild(row);
+    });
   }
 
   function completedLines(b){
@@ -769,6 +943,7 @@
         if(state.activeId === b.id) state.activeId = state.boards[0].id;
         persist();
         renderAll();
+        subscribeActiveBoardCloud();
       });
       item.appendChild(name);
       item.appendChild(badge);
@@ -777,6 +952,7 @@
         state.activeId = b.id;
         persist();
         renderAll();
+        subscribeActiveBoardCloud();
       });
       boardListEl.appendChild(item);
     });
@@ -873,7 +1049,7 @@
           ed.textContent = b.texts[i];
           ed.addEventListener('input', ()=>{
             b.texts[i] = ed.textContent;
-            persist();
+            commitBoard(b);
             fitText(cell, ed);
           });
           ed.addEventListener('keydown', (e)=>{
@@ -905,7 +1081,7 @@
         cell.appendChild(label);
         const toggle = ()=>{
           b.checked[i] = !b.checked[i];
-          persist();
+          commitBoard(b);
           renderBoard();
           const el = board.children[i];
           if(el && el.tabIndex === 0) el.focus({preventScroll:true});
@@ -961,7 +1137,7 @@
       b.size = newSize;
       b.texts = texts;
       b.checked = new Array(n).fill(false);
-      persist();
+      commitBoard(b);
       renderAll();
     });
 
@@ -970,7 +1146,7 @@
       if(!b) return;
       b.mode = 'play';
       b.checked = new Array(b.size*b.size).fill(false);
-      persist();
+      commitBoard(b);
       renderAll();
     });
 
@@ -978,7 +1154,7 @@
       const b = currentBoard();
       if(!b) return;
       b.mode = 'setup';
-      persist();
+      commitBoard(b);
       renderAll();
     });
 
@@ -987,7 +1163,7 @@
       if(!b) return;
       b.joker = !b.joker;
       if(b.joker) b.checked[jokerIndex(b.size)] = true;
-      persist();
+      commitBoard(b);
       renderAll();
     });
 
@@ -996,7 +1172,7 @@
         const b = currentBoard();
         if(!b) return;
         b.color = sw.dataset.color;
-        persist();
+        commitBoard(b);
         renderAll();
       });
     });
@@ -1005,7 +1181,7 @@
       const b = currentBoard();
       if(!b) return;
       b.color = customColor.value;
-      persist();
+      commitBoard(b);
       renderAll();
     });
 
@@ -1015,7 +1191,7 @@
       const name = prompt(t('prompt_rename'), b.name);
       if(name === null || !name.trim()) return;
       b.name = name.trim();
-      persist();
+      commitBoard(b);
       renderAll();
     });
 
@@ -1040,7 +1216,7 @@
       b.texts = new Array(n).fill('');
       b.checked = new Array(n).fill(false);
       b.mode = 'setup';
-      persist();
+      commitBoard(b);
       renderAll();
     });
 
@@ -1049,43 +1225,88 @@
       state.boards.push(b);
       state.activeId = b.id;
       persist();
+      ensureBoardCloud(b);
       renderAll();
+      subscribeActiveBoardCloud();
     });
   }
 
-  window.addEventListener('storage', (e)=>{
-    if(e.key !== STORAGE_KEY) return;
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw === lastSerialized) return;
-    try{
-      const s = JSON.parse(raw);
-      if(s && Array.isArray(s.boards)){
-        state = s;
-        lastSerialized = raw;
-        renderAll();
-      }
-    }catch(err){}
-  });
-
-  if(isEmbed){
-    setInterval(()=>{
+  if(!isEmbed){
+    window.addEventListener('storage', (e)=>{
+      if(e.key !== STORAGE_KEY) return;
       const raw = localStorage.getItem(STORAGE_KEY);
-      if(raw && raw !== lastSerialized){
-        try{
-          const s = JSON.parse(raw);
-          if(s && Array.isArray(s.boards)){
-            state = s;
-            lastSerialized = raw;
-            renderAll();
-          }
-        }catch(err){}
+      if(raw === lastSerialized) return;
+      try{
+        const s = JSON.parse(raw);
+        if(s && Array.isArray(s.boards)){
+          state = s;
+          lastSerialized = raw;
+          renderAll();
+          subscribeActiveBoardCloud();
+        }
+      }catch(err){}
+    });
+  }
+
+  let embedRequestedPairing = false;
+
+  function renderEmbedWaiting(key){
+    board.remove();
+    status.textContent = '';
+    const msg = document.createElement('div');
+    msg.id = 'embedWait';
+    msg.textContent = t(key);
+    boardWrap.innerHTML = '';
+    boardWrap.appendChild(msg);
+  }
+
+  function bootstrapEmbed(){
+    if(!db){ renderEmbedWaiting('empty_notfound'); return; }
+    const ref = db.ref('boards/' + embedId + '/data');
+    ref.on('value', function(snap){
+      const remote = snap.val();
+      if(!remote){
+        embedBoardData = null;
+        renderEmbedWaiting('empty_notfound');
+        return;
       }
-    }, 1000);
+      const approved = !!(remote.approvedDevices && remote.approvedDevices[MY_TOKEN]);
+      if(!approved){
+        embedBoardData = null;
+        if(!embedRequestedPairing){
+          embedRequestedPairing = true;
+          db.ref('boards/' + embedId + '/pending/' + MY_TOKEN).set({ requestedAt: Date.now() });
+        }
+        renderEmbedWaiting('embed_pending');
+        return;
+      }
+      embedBoardData = {
+        id: embedId,
+        name: remote.name,
+        size: remote.size,
+        texts: remote.texts,
+        checked: remote.checked,
+        mode: remote.mode,
+        joker: remote.joker,
+        color: remote.color
+      };
+      renderBoard();
+    }, function(err){
+      console.warn('embed subscribe failed', err);
+      renderEmbedWaiting('empty_notfound');
+    });
   }
 
   applyStaticTranslations();
-  persist();
-  renderAll();
+
+  if(isEmbed){
+    bootstrapEmbed();
+  }else{
+    persist();
+    state.boards.forEach(ensureBoardCloud);
+    renderAll();
+    subscribeActiveBoardCloud();
+  }
 })();
 </script>
 </body>
