@@ -52,6 +52,7 @@
     --joker-bg-2:#2a2410;
     --bingo-bg-1:#3a2f13;
     --bingo-bg-2:#4a3a10;
+    --active-tint:#232842;
     --radius:14px;
   }
   @media (prefers-color-scheme: light){
@@ -73,6 +74,7 @@
       --joker-bg-2:#ffe9b3;
       --bingo-bg-1:#fff4d6;
       --bingo-bg-2:#ffe1a3;
+      --active-tint:#ece9ff;
     }
   }
   :root[data-theme="light"]{
@@ -93,6 +95,7 @@
     --joker-bg-2:#ffe9b3;
     --bingo-bg-1:#fff4d6;
     --bingo-bg-2:#ffe1a3;
+    --active-tint:#ece9ff;
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
@@ -221,7 +224,7 @@
     transition:.15s;
   }
   .board-item:hover{border-color:var(--accent);}
-  .board-item.active{border-color:var(--accent);background:#232842;}
+  .board-item.active{border-color:var(--accent);background:var(--active-tint);}
   .board-item .name{
     flex:1;
     font-size:13px;
